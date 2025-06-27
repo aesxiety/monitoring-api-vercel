@@ -1,12 +1,11 @@
-import { db } from '../../utils/firebase'; // atau '../utils/firebase' sesuai struktur kamu
+import { db } from '../utils/firebase';
 
 export default async function handler(req, res) {
-  // ✅ CORS headers
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // ✅ Handle preflight (OPTIONS)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -17,14 +16,10 @@ export default async function handler(req, res) {
 
   try {
     const snapshot = await db
-      .collection('sensors')
+      .collection('sensor_data')
       .orderBy('timestamp', 'desc')
       .limit(20)
       .get();
-
-    if (snapshot.empty) {
-      return res.status(404).json({ success: false, message: 'Data kosong' });
-    }
 
     const data = snapshot.docs.map(doc => {
       const d = doc.data();
