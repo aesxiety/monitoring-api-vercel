@@ -11,19 +11,18 @@ export default async function handler(req, res) {
         berat: req.body.berat,
         suara: req.body.suara,
         anomaly: req.body.anomaly,
-        timestamp: new Date()
+        timestamp: new Date().toISOString()
       };
 
-      // 🔧 Hapus semua field yang undefined agar tidak error di Firestore
-      const filteredData = Object.fromEntries(
-        Object.entries(data).filter(([_, v]) => v !== undefined)
+      // Hilangkan nilai undefined agar tidak error di Firestore
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => value !== undefined)
       );
 
-      await db.collection('sensor_data').add(filteredData);
+      await db.collection('sensor_data').add(cleanData);
 
-      res.status(200).json({ success: true, message: 'Data berhasil disimpan ke Firestore' });
+      res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
     } catch (error) {
-      console.error('🔥 Firestore Error:', error.message);
       res.status(500).json({ success: false, error: error.message });
     }
   } else {
