@@ -1,21 +1,32 @@
-import { db } from '../utils/firebase.js';
+import { db } from '../utils/firebase';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
+  if (req.method === 'POST') {
+    try {
+      const data = {
+        suhu: req.body.suhu,
+        kelembaban: req.body.kelembaban,
+        tekanan: req.body.tekanan,
+        gas: req.body.gas,
+        berat: req.body.berat,
+        suara: req.body.suara,
+        anomaly: req.body.anomaly,
+        timestamp: new Date()
+      };
 
-  const { suhu, kelembaban, tekanan, gas, berat, suara, waktu } = req.body;
+      // 🔧 Hapus semua field yang undefined agar tidak error di Firestore
+      const filteredData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
 
-  try {
-    const data = {
-      suhu, kelembaban, tekanan, gas, berat, suara,
-      waktu: waktu || new Date().toISOString()
-    };
+      await db.collection('sensor_data').add(filteredData);
 
-    await db.collection('sensor_data').add(data);
-    res.status(200).json({ success: true, data });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+      res.status(200).json({ success: true, message: 'Data berhasil disimpan ke Firestore' });
+    } catch (error) {
+      console.error('🔥 Firestore Error:', error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  } else {
+    res.status(405).json({ message: 'Method not allowed' });
   }
 }
