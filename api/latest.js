@@ -1,19 +1,21 @@
 import { db } from '../utils/firebase';
 
 export default async function handler(req, res) {
-  
+  // ✅ CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // ✅ Handle preflight request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // ✅ GET Latest Sensor Data
   if (req.method === 'GET') {
     try {
       const snapshot = await db
-        .collection('sensor_data')
+        .collection('sensor_data') // pastikan nama koleksi sudah sesuai
         .orderBy('timestamp', 'desc')
         .limit(1)
         .get();
@@ -23,11 +25,14 @@ export default async function handler(req, res) {
       }
 
       const data = snapshot.docs[0].data();
-      res.status(200).json({ success: true, data });
+
+      return res.status(200).json({ success: true, data });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('🔥 Firestore Error:', error.message);
+      return res.status(500).json({ success: false, error: error.message });
     }
-  } else {
-    res.status(405).json({ message: 'Method not allowed' });
   }
+
+  // ✅ Reject other methods
+  return res.status(405).json({ message: 'Method not allowed' });
 }
