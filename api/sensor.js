@@ -1,31 +1,67 @@
 import { db } from '../utils/firebase';
+import { setCors } from '../utils/cors';
+import admin from 'firebase-admin';
 
 export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    try {
-      const data = {
-        suhu: req.body.suhu,
-        kelembaban: req.body.kelembaban,
-        tekanan: req.body.tekanan,
-        gas: req.body.gas,
-        berat: req.body.berat,
-        suara: req.body.suara,
-        anomaly: req.body.anomaly,
-        timestamp: new Date().toISOString()
-      };
+  setCors(res);
 
-      // Hilangkan nilai undefined agar tidak error di Firestore
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, value]) => value !== undefined)
-      );
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
-      await db.collection('sensor_data').add(cleanData);
+  try {
+    const {
+      suhu,
+      kelembaban,
+      gas,
+      suara,
+      gerakan,
+      waktuGerakan
+    } = req.body;
 
-      res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+    // ===== VALIDASI DATA =====
+    if (
+      typeof suhu !== 'number' ||
+      typeof kelembaban !== 'number' ||
+      typeof gas !== 'number' ||
+      typeof suara !== 'number' ||
+      typeof gerakan !== 'number' ||
+      typeof waktuGerakan !== 'number'
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format data tidak valid. Pastikan semua nilai adalah number.'
+      });
     }
-  } else {
-    res.status(405).json({ message: 'Method not allowed' });
+
+    // Nilai harus masuk akal (opsional)
+    if (
+      suhu < -40 || suhu > 85 ||
+      kelembaban < 0 || kelembaban > 100 ||
+      gas < 0 || suara < 0 ||
+      gerakan < 0 || gerakan > 1
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nilai data di luar batas wajar.'
+      });
+    }
+
+    // ===== SIMPAN KE FIRESTORE =====
+    const data = {
+      suhu,
+      kelembaban,
+      gas,
+      suara,
+      gerakan,
+      waktuGerakan,
+      timestamp: admin.firestore.Timestamp.now()
+    };
+
+    await db.collection('sensor_data').add(data);
+
+    return res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
+  } catch (error) {
+    console.error('[API] Error simpan data:', error.message);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
