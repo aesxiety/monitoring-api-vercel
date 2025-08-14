@@ -1,4 +1,5 @@
-import { db, Timestamp } from '../utils/firebase';
+// api/sensor.js
+import { db, Timestamp } from '../utils/firebase.js';
 
 export default async function handler(req, res) {
   // CORS
@@ -10,18 +11,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
-    if (!req.body || typeof req.body !== 'object') {
-      return res.status(400).json({ success: false, message: 'Invalid body' });
-    }
+    const { suhu, kelembaban, gas, suara, gerakan, waktuGerakan } = req.body || {};
 
-    const { suhu, kelembaban, gas, suara, gerakan, waktuGerakan } = req.body;
-
-    // Validasi sederhana (aman & quick)
-    const isNum = v => typeof v === 'number' && !isNaN(v);
-    if (![suhu, kelembaban, gas, suara, gerakan].every(isNum)) {
+    if (![suhu, kelembaban, gas, suara, gerakan].every(v => typeof v === 'number' && !isNaN(v))) {
       return res.status(400).json({ success: false, message: 'Invalid types' });
     }
-    if (gerakan !== 0 && gerakan !== 1) {
+
+    if (![0,1].includes(gerakan)) {
       return res.status(400).json({ success: false, message: 'gerakan must be 0 or 1' });
     }
 
@@ -31,14 +27,15 @@ export default async function handler(req, res) {
       gas,
       suara,
       gerakan,
-      ...(isNum(waktuGerakan) ? { waktuGerakan } : {}),
-      timestamp: Timestamp.now(),
+      ...(typeof waktuGerakan === 'number' ? { waktuGerakan } : {}),
+      timestamp: Timestamp.now()
     };
 
     await db.collection('sensor_data').add(data);
-    return res.status(200).json({ success: true, message: 'OK' });
-  } catch (e) {
-    console.error('[sensor] error:', e);
-    return res.status(500).json({ success: false, error: e.message });
+
+    return res.status(200).json({ success: true, message: 'Data saved' });
+  } catch (err) {
+    console.error('[sensor] Error:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
 }
