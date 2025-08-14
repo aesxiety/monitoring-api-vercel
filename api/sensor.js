@@ -1,67 +1,45 @@
 import { db } from '../utils/firebase';
-import { setCors } from '../utils/cors';
-import admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export default async function handler(req, res) {
-  setCors(res);
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
-    const {
-      suhu,
-      kelembaban,
-      gas,
-      suara,
-      gerakan,
-      waktuGerakan
-    } = req.body;
-
-    // ===== VALIDASI DATA =====
-    if (
-      typeof suhu !== 'number' ||
-      typeof kelembaban !== 'number' ||
-      typeof gas !== 'number' ||
-      typeof suara !== 'number' ||
-      typeof gerakan !== 'number' ||
-      typeof waktuGerakan !== 'number'
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Format data tidak valid. Pastikan semua nilai adalah number.'
-      });
+    // Pastikan body ada
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ success: false, message: 'Invalid request body' });
     }
 
-    // Nilai harus masuk akal (opsional)
-    if (
-      suhu < -40 || suhu > 85 ||
-      kelembaban < 0 || kelembaban > 100 ||
-      gas < 0 || suara < 0 ||
-      gerakan < 0 || gerakan > 1
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nilai data di luar batas wajar.'
-      });
-    }
+    const { suhu, kelembaban, tekanan, gas, berat, suara, anomaly, gerakan } = req.body;
 
-    // ===== SIMPAN KE FIRESTORE =====
-    const data = {
+    const cleanData = {
       suhu,
       kelembaban,
+      tekanan,
       gas,
+      berat,
       suara,
+      anomaly,
       gerakan,
-      waktuGerakan,
-      timestamp: admin.firestore.Timestamp.now()
+      timestamp: Timestamp.now(), // gunakan Firestore Timestamp
     };
 
-    await db.collection('sensor_data').add(data);
+    // Hapus field undefined
+    Object.keys(cleanData).forEach(
+      key => cleanData[key] === undefined && delete cleanData[key]
+    );
 
-    return res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
+    await db.collection('sensor_data').add(cleanData);
+
+    res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
   } catch (error) {
-    console.error('[API] Error simpan data:', error.message);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('Sensor API Error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 }

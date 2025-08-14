@@ -1,8 +1,11 @@
 import { db } from '../utils/firebase';
-import { setCors } from '../utils/cors';
 
 export default async function handler(req, res) {
-  setCors(res);
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ message: 'Method not allowed' });
 
@@ -15,15 +18,23 @@ export default async function handler(req, res) {
 
     const data = snapshot.docs.map(doc => {
       const d = doc.data();
-      return {
-        ...d,
-        waktu: d.timestamp.toDate().toLocaleTimeString('id-ID')
-      };
+      let waktu;
+
+      // Auto-handle Firestore Timestamp & ISO String
+      if (d.timestamp?._seconds) {
+        waktu = new Date(d.timestamp._seconds * 1000).toLocaleTimeString('id-ID');
+      } else if (typeof d.timestamp === 'string') {
+        waktu = new Date(d.timestamp).toLocaleTimeString('id-ID');
+      } else {
+        waktu = '-';
+      }
+
+      return { ...d, waktu };
     });
 
     return res.status(200).json({ success: true, data: data.reverse() });
   } catch (err) {
-    console.error('[API] Error ambil history:', err.message);
+    console.error('History API Error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 }
