@@ -1,45 +1,44 @@
-import { db } from '../utils/firebase';
-import { Timestamp } from 'firebase-admin/firestore';
+import { db, Timestamp } from '../../utils/firebase';
 
 export default async function handler(req, res) {
-  // CORS headers
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
-    // Pastikan body ada
     if (!req.body || typeof req.body !== 'object') {
-      return res.status(400).json({ success: false, message: 'Invalid request body' });
+      return res.status(400).json({ success: false, message: 'Invalid body' });
     }
 
-    const { suhu, kelembaban, tekanan, gas, berat, suara, anomaly, gerakan } = req.body;
+    const { suhu, kelembaban, gas, suara, gerakan, waktuGerakan } = req.body;
 
-    const cleanData = {
+    // Validasi sederhana (aman & quick)
+    const isNum = v => typeof v === 'number' && !isNaN(v);
+    if (![suhu, kelembaban, gas, suara, gerakan].every(isNum)) {
+      return res.status(400).json({ success: false, message: 'Invalid types' });
+    }
+    if (gerakan !== 0 && gerakan !== 1) {
+      return res.status(400).json({ success: false, message: 'gerakan must be 0 or 1' });
+    }
+
+    const data = {
       suhu,
       kelembaban,
-      tekanan,
       gas,
-      berat,
       suara,
-      anomaly,
       gerakan,
-      timestamp: Timestamp.now(), // gunakan Firestore Timestamp
+      ...(isNum(waktuGerakan) ? { waktuGerakan } : {}),
+      timestamp: Timestamp.now(),
     };
 
-    // Hapus field undefined
-    Object.keys(cleanData).forEach(
-      key => cleanData[key] === undefined && delete cleanData[key]
-    );
-
-    await db.collection('sensor_data').add(cleanData);
-
-    res.status(200).json({ success: true, message: 'Data berhasil disimpan' });
-  } catch (error) {
-    console.error('Sensor API Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    await db.collection('sensor_data').add(data);
+    return res.status(200).json({ success: true, message: 'OK' });
+  } catch (e) {
+    console.error('[sensor] error:', e);
+    return res.status(500).json({ success: false, error: e.message });
   }
 }
