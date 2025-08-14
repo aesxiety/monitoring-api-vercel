@@ -1,5 +1,8 @@
 import { db, Timestamp } from '../utils/firebase';
 
+import { db } from '../utils/firebase';
+import { Timestamp } from 'firebase-admin/firestore';
+
 export default async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
