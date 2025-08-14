@@ -1,4 +1,4 @@
-import { db, Timestamp } from '../../utils/firebase';
+import { db, Timestamp } from '../utils/firebase';
 
 export default async function handler(req, res) {
   // CORS

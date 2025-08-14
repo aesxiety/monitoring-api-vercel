@@ -1,4 +1,4 @@
-import { db } from '../../utils/firebase';
+import { db } from '../utils/firebase';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

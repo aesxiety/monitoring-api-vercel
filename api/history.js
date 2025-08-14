@@ -1,4 +1,4 @@
-import { db } from '../../utils/firebase';
+import { db } from '../utils/firebase';
 
 function parseDateOnly(d) {
   if (!d) return null;
