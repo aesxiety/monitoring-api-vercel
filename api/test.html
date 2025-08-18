@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Realtime Sensor</h2>
+<pre id="output"></pre>
+
+<script>
+const evtSource = new EventSource("https://monitoring-api-vercel.vercel.app/api/sensor-realtime");
+const output = document.getElementById("output");
+
+evtSource.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  output.textContent = JSON.stringify(data, null, 2);
+};
+</script>
+</body>
+</html>
